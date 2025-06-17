@@ -52,26 +52,21 @@ function App() {
     }
   };
 
-  const handlePDFConvert = async (e) => {
-    e.preventDefault();
+  const handlePDFConvert = async () => {
     if (!url) return;
 
     setLoading(true);
     setMessage('');
     
     try {
-      setMessage('Converting DocSend to PDF... This may take up to 60 seconds.');
+      setMessage('Converting DocSend to PDF... This process can take 1-3 minutes. Please wait...');
       
       const response = await axios({
         method: 'POST',
         url: `${API_BASE}/api/pdf/convert`,
-        data: { 
-          url, 
-          passcode: password, // Using password field for passcode
-          searchable: true 
-        },
+        data: { url }, // Remove passcode since we're not using it
         responseType: 'blob',
-        timeout: 65000 // 65 second timeout
+        timeout: 240000 // 4 minute timeout for the whole process
       });
       
       // Create download link
@@ -80,7 +75,6 @@ function App() {
       const link = document.createElement('a');
       link.href = downloadUrl;
       
-      // Extract filename from URL or use default
       const urlObj = new URL(url);
       const docId = urlObj.pathname.split('/').pop() || 'document';
       link.download = `docsend-${docId}-${Date.now()}.pdf`;
@@ -96,11 +90,9 @@ function App() {
     } catch (error) {
       console.error('PDF conversion error:', error);
       if (error.code === 'ECONNABORTED') {
-        setMessage('Error: PDF conversion timed out. The document may be too large or the service is busy. Please try again.');
-      } else if (error.response?.status === 429) {
-        setMessage('Error: Rate limit exceeded. Please wait a moment and try again.');
+        setMessage('Error: PDF conversion is taking longer than expected. The document may be very large. Please try again.');
       } else {
-        setMessage('Error: ' + (error.response?.data?.error || 'PDF conversion failed. Please check the URL and try again.'));
+        setMessage('Error: ' + (error.response?.data?.error || 'PDF conversion failed. Please try again.'));
       }
     } finally {
       setLoading(false);
