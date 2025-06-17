@@ -142,30 +142,41 @@ function App() {
               </div>
             ) : (
               presentations.map(presentation => (
-                <div key={presentation._id} className="p-6 hover:bg-gray-50">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900 mb-1">
-                        {presentation.title || 'Untitled Presentation'}
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-2">
-                        {presentation.slideCount || 0} slides
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(presentation.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(presentation.status)}
-                      <span className="text-sm capitalize text-gray-600">
-                        {presentation.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
+  <div key={presentation._id} className="p-6 hover:bg-gray-50">
+    <div className="flex items-start justify-between">
+      <div className="flex-1">
+        <h3 className="font-medium text-gray-900 mb-1">
+          {presentation.title || 'Untitled Presentation'}
+        </h3>
+        <p className="text-sm text-gray-600 mb-2">
+          {presentation.slideCount || 0} slides
+        </p>
+        
+        {/* Show first slide content */}
+        {presentation.slides && presentation.slides[0] && (
+          <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
+            <strong>Preview:</strong>
+            <p className="mt-1 text-gray-700">
+              {presentation.slides[0].text.substring(0, 200)}
+              {presentation.slides[0].text.length > 200 ? '...' : ''}
+            </p>
+          </div>
+        )}
+        
+        <p className="text-xs text-gray-500 mt-2">
+          {new Date(presentation.createdAt).toLocaleString()}
+        </p>
+      </div>
+      
+      <div className="flex items-center gap-2">
+        {getStatusIcon(presentation.status)}
+        <span className="text-sm capitalize text-gray-600">
+          {presentation.status}
+        </span>
+      </div>
+    </div>
+  </div>
+))}
           </div>
         </div>
       </div>
