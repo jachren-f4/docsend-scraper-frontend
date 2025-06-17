@@ -309,7 +309,7 @@ function App() {
                 ) : (
                   <>
                     <Upload size={16} />
-                    Scrape Text
+                    Scrape Texty
                   </>
                 )}
               </button>
