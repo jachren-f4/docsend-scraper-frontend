@@ -52,6 +52,61 @@ function App() {
     }
   };
 
+  const handlePDFConvert = async (e) => {
+    e.preventDefault();
+    if (!url) return;
+
+    setLoading(true);
+    setMessage('');
+    
+    try {
+      setMessage('Converting DocSend to PDF... This may take up to 60 seconds.');
+      
+      const response = await axios({
+        method: 'POST',
+        url: `${API_BASE}/api/pdf/convert`,
+        data: { 
+          url, 
+          passcode: password, // Using password field for passcode
+          searchable: true 
+        },
+        responseType: 'blob',
+        timeout: 65000 // 65 second timeout
+      });
+      
+      // Create download link
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      
+      // Extract filename from URL or use default
+      const urlObj = new URL(url);
+      const docId = urlObj.pathname.split('/').pop() || 'document';
+      link.download = `docsend-${docId}-${Date.now()}.pdf`;
+      
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      setUrl('');
+      setPassword('');
+      setMessage('PDF downloaded successfully! Check your downloads folder.');
+    } catch (error) {
+      console.error('PDF conversion error:', error);
+      if (error.code === 'ECONNABORTED') {
+        setMessage('Error: PDF conversion timed out. The document may be too large or the service is busy. Please try again.');
+      } else if (error.response?.status === 429) {
+        setMessage('Error: Rate limit exceeded. Please wait a moment and try again.');
+      } else {
+        setMessage('Error: ' + (error.response?.data?.error || 'PDF conversion failed. Please check the URL and try again.'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'completed': return <CheckCircle className="text-green-500" size={16} />;
@@ -193,7 +248,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <FileText className="text-blue-600" />
-            DocSend Scraper
+            DocSend Scraper & PDF Converter
           </h1>
         </div>
       </header>
@@ -201,7 +256,7 @@ function App() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Scraping Form */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Scrape New Presentation</h2>
+          <h2 className="text-xl font-semibold mb-4">Process DocSend Document</h2>
           
           {message && (
             <div className={`mb-4 p-3 rounded ${
@@ -214,11 +269,11 @@ function App() {
           <form onSubmit={handleScrape} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL to Scrape
+                DocSend URL
               </label>
               <input
                 type="url"
-                placeholder="https://docsend.com/view/... or any webpage"
+                placeholder="https://docsend.com/view/..."
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
@@ -228,7 +283,7 @@ function App() {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password (if required)
+                Password/Passcode (if required)
               </label>
               <input
                 type="password"
@@ -239,24 +294,55 @@ function App() {
               />
             </div>
             
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader className="animate-spin" size={16} />
-                  Scraping...
-                </>
-              ) : (
-                <>
-                  <Upload size={16} />
-                  Scrape Content
-                </>
-              )}
-            </button>
+            {/* Updated buttons section */}
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader className="animate-spin" size={16} />
+                    Scraping...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={16} />
+                    Scrape Text Content
+                  </>
+                )}
+              </button>
+              
+              <button
+                type="button"
+                onClick={handlePDFConvert}
+                disabled={loading || !url}
+                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader className="animate-spin" size={16} />
+                    Converting...
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Convert to PDF
+                  </>
+                )}
+              </button>
+            </div>
           </form>
+          
+          {/* Help text */}
+          <div className="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded">
+            <strong>Options:</strong>
+            <ul className="mt-1 space-y-1">
+              <li>• <strong>Scrape Text Content:</strong> Extract and view text content in your browser</li>
+              <li>• <strong>Convert to PDF:</strong> Download the original document as a PDF file (faster, higher quality)</li>
+            </ul>
+          </div>
         </div>
 
         {/* Search */}
@@ -284,7 +370,7 @@ function App() {
           <div className="divide-y">
             {filteredPresentations.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
-                {searchTerm ? 'No presentations match your search.' : 'No presentations scraped yet. Try adding a URL above!'}
+                {searchTerm ? 'No presentations match your search.' : 'No presentations scraped yet. Try adding a DocSend URL above!'}
               </div>
             ) : (
               filteredPresentations.map(presentation => (
