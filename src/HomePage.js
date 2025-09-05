@@ -2,16 +2,25 @@ import React, { useEffect } from 'react';
 
 function HomePage() {
   useEffect(() => {
-    // Load the LaunchList widget script
-    const script = document.createElement('script');
-    script.src = 'https://getlaunchlist.com/js/widget.js';
-    script.defer = true;
-    document.head.appendChild(script);
+    // Check if the LaunchList script is already loaded
+    const existingScript = document.querySelector('script[src="https://getlaunchlist.com/js/widget.js"]');
+    
+    if (!existingScript) {
+      // Load the LaunchList widget script only if it doesn't exist
+      const script = document.createElement('script');
+      script.src = 'https://getlaunchlist.com/js/widget.js';
+      script.defer = true;
+      script.id = 'launchlist-widget-script';
+      document.head.appendChild(script);
 
-    // Cleanup function to remove script when component unmounts
-    return () => {
-      document.head.removeChild(script);
-    };
+      // Cleanup function to remove script when component unmounts
+      return () => {
+        const scriptElement = document.getElementById('launchlist-widget-script');
+        if (scriptElement) {
+          document.head.removeChild(scriptElement);
+        }
+      };
+    }
   }, []);
 
   return (
